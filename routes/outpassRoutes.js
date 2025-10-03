@@ -56,6 +56,7 @@ router.patch('/:id', async (req, res) => {
 
     outpass.status = status;
 
+    // QR only generated if Approved
     if (status === 'Approved') {
       const qrData = JSON.stringify({
         rollNo: outpass.rollNo,
@@ -66,7 +67,7 @@ router.patch('/:id', async (req, res) => {
       });
       outpass.qrCode = await QRCode.toDataURL(qrData);
     } else {
-      outpass.qrCode = null;
+      outpass.qrCode = null; // Remove QR for Rejected
     }
 
     await outpass.save();
@@ -78,12 +79,14 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// 🔹 Delete an outpass (Optional)
-router.delete('/:id', async (req, res) => {
+// GET /api/outpasses
+router.get('/', async (req, res) => {
   try {
-    const outpass = await Outpass.findByIdAndDelete(req.params.id);
-    if (!outpass) return res.status(404).json({ message: 'Outpass not found' });
-    res.json({ message: 'Outpass deleted successfully' });
+    const { rollNo } = req.query; // optional query param
+    if (!rollNo) return res.status(400).json({ message: 'rollNo is required' });
+
+    const outpasses = await Outpass.find({ rollNo }).sort({ createdAt: -1 });
+    res.json(outpasses);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
