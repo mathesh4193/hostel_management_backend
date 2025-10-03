@@ -1,16 +1,43 @@
 import express from 'express';
 import Outpass from '../models/Outpass.js';
+import QRCode from 'qrcode';
+
 const router = express.Router();
 
-// 1️⃣ Get Outpasses
-// Student: rollNo query parameter
-// Warden: no query => get all
+// 🔹 Create a new outpass (Student)
+router.post('/', async (req, res) => {
+  try {
+    const {
+      rollNo, studentName, roomNo,
+      destination, purpose, departureTime,
+      returnTime, emergencyContact
+    } = req.body;
+
+    if (!rollNo || !studentName || !roomNo || !destination || !purpose || !departureTime || !returnTime || !emergencyContact) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const newOutpass = new Outpass({
+      rollNo, studentName, roomNo,
+      destination, purpose, departureTime,
+      returnTime, emergencyContact
+    });
+
+    const savedOutpass = await newOutpass.save();
+    res.status(201).json(savedOutpass);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 🔹 Get outpasses (Student: by rollNo, Warden: all)
 router.get('/', async (req, res) => {
   try {
     const { rollNo } = req.query;
-    const outpasses = rollNo 
-      ? await Outpass.find({ rollNo }).sort({ createdAt: -1 })
-      : await Outpass.find().sort({ createdAt: -1 });
+    const filter = rollNo ? { rollNo } : {};
+    const outpasses = await Outpass.find(filter).sort({ createdAt: -1 });
     res.json(outpasses);
   } catch (err) {
     console.error(err);
@@ -18,42 +45,48 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2️⃣ Submit Outpass
-router.post('/', async (req, res) => {
-  try {
-    const { rollNo, studentName, roomNo, destination, purpose, departureTime, returnTime, emergencyContact } = req.body;
-
-    if (!rollNo || !studentName || !destination || !purpose || !departureTime || !returnTime)
-      return res.status(400).json({ message: 'All required fields must be provided' });
-
-    const newOutpass = new Outpass({
-      rollNo,
-      studentName,
-      roomNo,
-      destination,
-      purpose,
-      departureTime: new Date(departureTime),
-      returnTime: new Date(returnTime),
-      emergencyContact
-    });
-
-    const saved = await newOutpass.save();
-    res.status(201).json(saved);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to submit outpass' });
-  }
-});
-
-// 3️⃣ Warden: Approve / Reject
+// 🔹 Update status (Warden: approve/reject + QR generation)
 router.patch('/:id', async (req, res) => {
   try {
     const { status } = req.body;
-    const updated = await Outpass.findByIdAndUpdate(req.params.id, { status }, { new: true });
-    res.json(updated);
+    if (!status) return res.status(400).json({ message: 'Status is required' });
+
+    const outpass = await Outpass.findById(req.params.id);
+    if (!outpass) return res.status(404).json({ message: 'Outpass not found' });
+
+    outpass.status = status;
+
+    if (status === 'Approved') {
+      const qrData = JSON.stringify({
+        rollNo: outpass.rollNo,
+        studentName: outpass.studentName,
+        departureTime: outpass.departureTime,
+        returnTime: outpass.returnTime,
+        status
+      });
+      outpass.qrCode = await QRCode.toDataURL(qrData);
+    } else {
+      outpass.qrCode = null;
+    }
+
+    await outpass.save();
+    res.json(outpass);
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to update status' });
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 🔹 Delete an outpass (Optional)
+router.delete('/:id', async (req, res) => {
+  try {
+    const outpass = await Outpass.findByIdAndDelete(req.params.id);
+    if (!outpass) return res.status(404).json({ message: 'Outpass not found' });
+    res.json({ message: 'Outpass deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

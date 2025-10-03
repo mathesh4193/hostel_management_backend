@@ -9,7 +9,8 @@ const outpassSchema = new mongoose.Schema({
   departureTime: { type: Date, required: true },
   returnTime: { type: Date, required: true },
   emergencyContact: { type: String, required: true },
-  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' }
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  qrCode: { type: String, default: null }
 }, { timestamps: true });
 
 export default mongoose.model('Outpass', outpassSchema);
