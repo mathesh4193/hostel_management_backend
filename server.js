@@ -13,25 +13,30 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ Middleware
+app.use(cors({
+  origin: [
+    "http://localhost:3000",                       // For local dev
+    "https://hostelmanagementmathesh1.netlify.app" // Your Netlify frontend
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
-// Connect MongoDB
+// ✅ Connect MongoDB
 await connectDB();
 
-// Routes
+// ✅ Routes
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/leaves', leaveRoutes);
-app.use('/api/students', studentRoutes);         // Student CRUD routes
-app.use('/api/auth', studentAuthRoutes);          // Student login
-app.use('/api/auth',wardenAuth);
+app.use('/api/students', studentRoutes);        // Student CRUD
+app.use('/api/auth', studentAuthRoutes);        // Student login
+app.use('/api/auth', wardenAuth);               // Warden login
 app.use('/api/outpasses', outpassRoutes);
 
-
-// Test route
+// ✅ Test route
 app.get('/', (req, res) => res.send('API is running'));
 
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
