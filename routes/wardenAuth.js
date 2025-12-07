@@ -1,4 +1,3 @@
-// routes/wardenAuth.js
 import express from 'express';
 import Warden from '../models/Warden.js';
 

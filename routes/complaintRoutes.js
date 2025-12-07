@@ -1,4 +1,3 @@
-// routes/complaintRoutes.js
 import express from "express";
 import Complaint from "../models/Complaint.js";
 
